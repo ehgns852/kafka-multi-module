@@ -1,13 +1,19 @@
 package com.example.kafka;
 
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
-public class SimpleProducer {
+public class SimpleProducerASync {
+
+
+    public static final Logger logger = LoggerFactory.getLogger(SimpleProducerASync.class.getName());
+
     public static void main(String[] args) {
 
         String topicName = "simple-topic";
@@ -27,9 +33,23 @@ public class SimpleProducer {
         ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topicName, "id-001", "hello world");
 
         //KafkaProducer send message
-        kafkaProducer.send(producerRecord);
+        kafkaProducer.send(producerRecord, (recordMetadata, exception) -> {
+            if (Objects.isNull(exception)) {
+                logger.info("\n ##### record metadata received ###### \n" +
+                        "partition:" + recordMetadata.partition() + "\n" +
+                        "offset:" + recordMetadata.offset() + "\n" +
+                        "timestamp:" + recordMetadata.timestamp());
+            } else {
+                logger.error("Exception error from broker" + exception.getMessage());
+            }
+        });
 
-        kafkaProducer.flush();
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         kafkaProducer.close();
     }
 }
